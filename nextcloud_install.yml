@@ -1,0 +1,35 @@
+---
+- hosts: all
+  remote_user: vagrant
+  become: yes
+  become_method: "sudo"
+  
+  vars: 
+    - nextcloud_version: "18.0.3"
+  
+  vars_prompt:
+    - name: mysql_root_password
+      prompt: "MariaDB root password"
+      private: yes
+    - name: nextcloud_mariadb_password
+      prompt: "Nextcloud MariaDB password"
+      private: yes
+    - name: your_domain
+      prompt: "Your domain"
+      private: no
+    - name: nextcloud_port
+      prompt: "Nextcloud HTTPS port"
+      default: 443
+      private: no
+    - name: nextcloud_instance_name
+      prompt: "Nextcloud instance name (URL will be https://[thisvalue].[your_domain])"
+      default: "nextcloud"
+      private: no
+    - name: admin_email
+      prompt: "Administrator email (for LE certs)"
+      private: no
+  
+  roles: 
+    - {role: lemp_stack}
+    - {role: letsencrypt_challenge}
+    - {role: nextcloud_installation}

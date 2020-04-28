@@ -1,0 +1,71 @@
+---
+- name: "Install packages"
+  apt:
+    name: "{{item}}"
+    state: present
+  loop:
+    - unzip
+
+- name: "Download file with check (sha256)"
+  get_url:
+    url: "https://download.nextcloud.com/server/releases/nextcloud-{{nextcloud_version}}.zip"
+    dest: "/tmp/nextcloud-{{nextcloud_version}}.zip"
+    #    checksum: "sha256:https://download.nextcloud.com/server/releases/nextcloud-{{nextcloud_version}}.zip.sha256"
+
+- name: "Install nextcloud"
+  unarchive:
+    src: "/tmp/nextcloud-{{nextcloud_version}}.zip"
+    dest: "/usr/share/nginx/"
+    remote_src: yes
+
+- name: "Change /usr/share/nginx/nextcloud owner to nginx"
+  file:
+    path: "{{item}}"
+    state: directory
+    recurse: yes
+    owner: www-data
+    group: www-data
+  loop:
+    - "/usr/share/nginx/nextcloud"
+
+- name: "Install packages"
+  apt:
+    name: "{{item}}"
+    state: present
+  loop:
+    - php-imagick 
+    - php7.2-common 
+    - php7.2-mysql 
+    - php7.2-fpm
+    - php7.2-gd
+    - php7.2-json
+    - php7.2-curl
+    - php7.2-zip
+    - php7.2-xml
+    - php7.2-mbstring
+    - php7.2-bz2 
+    - php7.2-intl
+
+- name: "Create a new database for nextcloud"
+  mysql_db:
+    name: nextcloud
+    state: present
+
+- name: "Create database user nextcloud with password and nextcloud database privileges and 'WITH GRANT OPTION'"
+  mysql_user:
+    name: nextcloud
+    password: "{{nextcloud_mariadb_password}}" 
+    priv: 'nextcloud.*:ALL,GRANT'
+    state: present
+
+- name: "Configure nginx for nextcloud instance"
+  template:
+    src: nextcloud.conf.j2
+    dest: "/etc/nginx/sites-available/{{nextcloud_instance_name}}.{{your_domain}}.conf"
+
+- name: "Create a link in sites-enabled"
+  file:
+    src: "/etc/nginx/sites-available/{{nextcloud_instance_name}}.{{your_domain}}.conf"
+    dest: "/etc/nginx/sites-enabled/{{nextcloud_instance_name}}.{{your_domain}}.conf"
+    state: link
+  notify: "nginx reload"
